@@ -248,6 +248,10 @@ impl_var!(
     Infiniband => libc::ARPHRD_INFINIBAND,
 
     // Possibly more types here - need to look into ARP more
+    Tunnel => libc::ARPHRD_TUNNEL,
+    Tunnel6 => libc::ARPHRD_TUNNEL6,
+    Loopback => libc::ARPHRD_LOOPBACK,
+    Ipgre => libc::ARPHRD_IPGRE,
 
     Void => libc::ARPHRD_VOID,
     None => libc::ARPHRD_NONE
