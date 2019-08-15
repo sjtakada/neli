@@ -254,7 +254,7 @@ impl NlSocket {
             vec![NlmF::Request, NlmF::Ack],
             None,
             None,
-            genlhdr,
+            Some(genlhdr),
         );
         self.send_nl(nlhdr)?;
 
@@ -267,7 +267,7 @@ impl NlSocket {
     /// numeric netlink ID
     pub fn resolve_genl_family(&mut self, family_name: &str) -> Result<u16, NlError> {
         let nlhdr = self.get_genl_family(family_name)?;
-        let handle = nlhdr.nl_payload.get_attr_handle();
+        let handle = nlhdr.nl_payload.as_ref().unwrap().get_attr_handle();
         Ok(handle.get_attr_payload_as::<u16>(CtrlAttr::FamilyId)?)
     }
 
@@ -279,7 +279,7 @@ impl NlSocket {
         mcast_name: &str,
     ) -> Result<u32, NlError> {
         let nlhdr = self.get_genl_family(family_name)?;
-        let mut handle = nlhdr.nl_payload.get_attr_handle();
+        let mut handle = nlhdr.nl_payload.as_ref().unwrap().get_attr_handle();
         let mcast_groups =
             handle.get_nested_attributes::<CtrlAttrMcastGrp>(CtrlAttr::McastGroups)?;
         mcast_groups
@@ -352,8 +352,8 @@ impl NlSocket {
 
     /// Consume an ACK and return an error if an ACK is not found
     pub fn recv_ack(&mut self) -> Result<(), NlError> {
-        if let Ok(ack) = self.recv_nl::<consts::Nlmsg, Nlmsgerr<consts::Nlmsg>>(None) {
-            if ack.nl_type == consts::Nlmsg::Error && ack.nl_payload.error == 0 {
+        if let Ok(ack) = self.recv_nl::<consts::Rtm, Nlmsgerr<consts::Rtm>>(None) {
+            if ack.nl_type == consts::Rtm::Error && ack.nl_payload.unwrap().error == 0 {
                 if self.pid.is_none() {
                     self.pid = Some(ack.nl_pid);
                 } else if self.pid != Some(ack.nl_pid) {
@@ -559,7 +559,7 @@ mod test {
 
         let nl1 = Nlmsghdr::new(
             None,
-            Nlmsg::Noop,
+            Rtm::Noop,
             vec![NlmF::Multi],
             None,
             None,
@@ -575,7 +575,7 @@ mod test {
         );
         let nl2 = Nlmsghdr::new(
             None,
-            Nlmsg::Noop,
+            Rtm::Noop,
             vec![NlmF::Multi],
             None,
             None,

@@ -30,7 +30,7 @@ pub struct Nlmsghdr<T, P> {
     /// ID of the netlink destination for requests and source for responses
     pub nl_pid: u32,
     /// Payload of netlink message
-    pub nl_payload: P,
+    pub nl_payload: Option<P>,
 }
 
 impl<T, P> Nlmsghdr<T, P>
@@ -45,7 +45,7 @@ where
         nl_flags: Vec<NlmF>,
         nl_seq: Option<u32>,
         nl_pid: Option<u32>,
-        nl_payload: P,
+        nl_payload: Option<P>,
     ) -> Self {
         let mut nl = Nlmsghdr {
             nl_type,
@@ -75,7 +75,7 @@ where
         val.serialize(mem)?;
         self.nl_seq.serialize(mem)?;
         self.nl_pid.serialize(mem)?;
-        self.nl_payload.serialize(mem)?;
+        self.nl_payload.as_ref().unwrap().serialize(mem)?;
         self.pad(mem)?;
 
         Ok(())
@@ -86,7 +86,8 @@ where
         B: AsRef<[u8]>,
     {
         let nl_len = u32::deserialize(mem)?;
-        let nl_type = T::deserialize(mem)?;
+        let nl_type_u16 = u16::deserialize(mem)?;
+        let nl_type = T::from(nl_type_u16);
         let nl_flags = {
             let flags = u16::deserialize(mem)?;
             let mut nl_flags = Vec::new();
@@ -100,11 +101,13 @@ where
         };
         let nl_seq = u32::deserialize(mem)?;
         let nl_pid = u32::deserialize(mem)?;
-        let nl_payload = {
+        let nl_payload = if nl_type_u16 >= 0x10 {
             let payload_len = nl_len as usize
                 - (nl_len.size() + nl_type.size() + 0u16.size() + nl_seq.size() + nl_pid.size());
             mem.set_size_hint(payload_len);
-            P::deserialize(mem)?
+            Some(P::deserialize(mem)?)
+        } else {
+            None
         };
 
         let nl = Nlmsghdr::<T, P> {
@@ -121,12 +124,17 @@ where
     }
 
     fn size(&self) -> usize {
+        let payload_size = match self.nl_payload.as_ref() {
+            Some(payload) => payload.size(),
+            None => 0
+        };
+
         self.nl_len.size()
             + <T as Nl>::size(&self.nl_type)
             + mem::size_of::<u16>()
             + self.nl_seq.size()
             + self.nl_pid.size()
-            + self.nl_payload.size()
+            + payload_size
     }
 }
 
@@ -165,7 +173,7 @@ mod test {
     fn test_nlhdr_serialize() {
         let mut mem = StreamWriteBuffer::new_growable(None);
         let nl =
-            Nlmsghdr::<Nlmsg, NlEmpty>::new(None, Nlmsg::Noop, Vec::new(), None, None, NlEmpty);
+            Nlmsghdr::<Nlmsg, NlEmpty>::new(None, Rtm::Noop, Vec::new(), None, None, NlEmpty);
         nl.serialize(&mut mem).unwrap();
         let s: &mut [u8] = &mut [0; 16];
         {
@@ -190,7 +198,7 @@ mod test {
         assert_eq!(
             Nlmsghdr::<Nlmsg, NlEmpty>::new(
                 None,
-                Nlmsg::Noop,
+                Rtm::Noop,
                 vec![NlmF::Ack],
                 None,
                 None,

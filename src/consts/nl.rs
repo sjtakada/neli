@@ -4,6 +4,7 @@ impl_trait!(
     u16
 );
 
+/*
 impl_var_trait!(
     /// Values for `nl_type` in `Nlmsghdr`
     Nlmsg, u16, NlType,
@@ -12,6 +13,7 @@ impl_var_trait!(
     Done => libc::NLMSG_DONE as u16,
     Overrun => libc::NLMSG_OVERRUN as u16
 );
+*/
 
 impl_var_trait!(
     /// Values for `nl_type` in `Nlmsghdr`
@@ -26,6 +28,11 @@ impl_var_trait!(
 impl_var_trait!(
     /// rtnetlink-related values for `nl_type` in `Nlmsghdr`
     Rtm, u16, NlType,
+    Noop => libc::NLMSG_NOOP as u16,
+    Error => libc::NLMSG_ERROR as u16,
+    Done => libc::NLMSG_DONE as u16,
+    Overrun => libc::NLMSG_OVERRUN as u16,
+    MinType => libc::NLMSG_MIN_TYPE as u16,
     Newlink => libc::RTM_NEWLINK,
     Dellink => libc::RTM_DELLINK,
     Getlink => libc::RTM_GETLINK,
