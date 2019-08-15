@@ -7,12 +7,12 @@
 //! ```no_run
 //! // This was received from the socket
 //! let nlmsg = neli::nl::Nlmsghdr::new(None, neli::consts::GenlId::Ctrl, Vec::new(), None, None,
-//!         neli::genl::Genlmsghdr::new(neli::consts::CtrlCmd::Unspec, 2, Vec::new()).unwrap());
+//!         Some(neli::genl::Genlmsghdr::new(neli::consts::CtrlCmd::Unspec, 2, Vec::new()).unwrap()));
 //!
 //! // Get parsing handler for the attributes in this message where the next call
 //! // to either get_nested_attributes() or get_payload_with() will expect a u16 type
 //! // to be provided
-//! let mut handle = nlmsg.nl_payload.get_attr_handle();
+//! let mut handle = nlmsg.nl_payload.as_ref().unwrap().get_attr_handle();
 //!
 //! // Get the nested attribute where the Nlattr field of nla_type is equal to 1 and return
 //! // a handler containing only this nested attribute internally

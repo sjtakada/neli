@@ -532,7 +532,7 @@ mod test {
 
     use std::io::Read;
 
-    use consts::Nlmsg;
+    use consts::Rtm;
 
     #[test]
     fn test_socket_nonblock() {
@@ -559,11 +559,11 @@ mod test {
 
         let nl1 = Nlmsghdr::new(
             None,
-            Rtm::Noop,
+            GenlId::Ctrl,
             vec![NlmF::Multi],
             None,
             None,
-            Genlmsghdr::new(
+            Some(Genlmsghdr::new(
                 CtrlCmd::Unspec,
                 2,
                 vec![
@@ -571,15 +571,15 @@ mod test {
                     Nlattr::new(None, CtrlAttr::FamilyName, "my_family_name").unwrap(),
                 ],
             )
-            .unwrap(),
+            .unwrap()),
         );
         let nl2 = Nlmsghdr::new(
             None,
-            Rtm::Noop,
+            GenlId::Ctrl,
             vec![NlmF::Multi],
             None,
             None,
-            Genlmsghdr::new(
+            Some(Genlmsghdr::new(
                 CtrlCmd::Unspec,
                 2,
                 vec![
@@ -587,7 +587,7 @@ mod test {
                     Nlattr::new(None, CtrlAttr::FamilyName, "my_other_family_name").unwrap(),
                 ],
             )
-            .unwrap(),
+            .unwrap()),
         );
 
         nl1.serialize(&mut stream).unwrap();

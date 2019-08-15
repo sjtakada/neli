@@ -166,14 +166,14 @@ impl Nl for NlEmpty {
 mod test {
     use super::*;
     use byteorder::{NativeEndian, WriteBytesExt};
-    use consts::Nlmsg;
+    use consts::Rtm;
     use std::io::Cursor;
 
     #[test]
     fn test_nlhdr_serialize() {
         let mut mem = StreamWriteBuffer::new_growable(None);
         let nl =
-            Nlmsghdr::<Nlmsg, NlEmpty>::new(None, Rtm::Noop, Vec::new(), None, None, NlEmpty);
+            Nlmsghdr::<Rtm, NlEmpty>::new(None, Rtm::Noop, Vec::new(), None, None, Some(NlEmpty));
         nl.serialize(&mut mem).unwrap();
         let s: &mut [u8] = &mut [0; 16];
         {
@@ -194,15 +194,15 @@ mod test {
             c.write_u16::<NativeEndian>(NlmF::Ack.into()).unwrap();
         }
         let mut mem = StreamReadBuffer::new(&*s);
-        let nl = Nlmsghdr::<Nlmsg, NlEmpty>::deserialize(&mut mem).unwrap();
+        let nl = Nlmsghdr::<Rtm, NlEmpty>::deserialize(&mut mem).unwrap();
         assert_eq!(
-            Nlmsghdr::<Nlmsg, NlEmpty>::new(
+            Nlmsghdr::<Rtm, NlEmpty>::new(
                 None,
                 Rtm::Noop,
                 vec![NlmF::Ack],
                 None,
                 None,
-                NlEmpty
+                None,
             ),
             nl
         );

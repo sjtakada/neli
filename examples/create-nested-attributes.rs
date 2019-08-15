@@ -49,11 +49,11 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let genlmsg = Genlmsghdr::new(consts::CtrlCmd::Getfamily, 2, attrs)?;
     let nlmsg = Nlmsghdr::new(
         None,
-        consts::Nlmsg::Noop,
+        consts::Rtm::Noop,
         vec![consts::NlmF::Request],
         None,
         None,
-        genlmsg,
+        Some(genlmsg),
     );
     let mut buffer = neli::StreamWriteBuffer::new_growable(Some(nlmsg.asize()));
     nlmsg.serialize(&mut buffer)?;

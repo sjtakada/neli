@@ -1,5 +1,5 @@
 extern crate neli;
-use neli::consts::{CtrlAttr, CtrlCmd, GenlId, NlFamily, NlmF, Nlmsg};
+use neli::consts::{CtrlAttr, CtrlCmd, GenlId, NlFamily, NlmF, Rtm};
 use neli::err::NlError;
 use neli::genl::Genlmsghdr;
 use neli::nl::Nlmsghdr;
@@ -24,26 +24,26 @@ fn main() -> Result<(), NlError> {
         let flags = vec![NlmF::Request, NlmF::Dump];
         let seq = None;
         let pid = None;
-        let payload = genlhdr;
+        let payload = Some(genlhdr);
         Nlmsghdr::new(len, nl_type, flags, seq, pid, payload)
     };
     socket.send_nl(nlhdr)?;
 
-    let mut iter = socket.iter::<Nlmsg, Genlmsghdr<CtrlCmd, CtrlAttr>>();
+    let mut iter = socket.iter::<Rtm, Genlmsghdr<CtrlCmd, CtrlAttr>>();
     while let Some(Ok(response)) = iter.next() {
         match response.nl_type {
             // This example could be improved by reinterpreting the payload as an Nlmsgerr struct
             // and printing the specific error encountered.
-            Nlmsg::Error => {
+            Rtm::Error => {
                 return Err(NlError::new(
                     "An error occurred while retrieving available families",
                 ))
             }
-            Nlmsg::Done => break,
+            Rtm::Done => break,
             _ => (),
         };
 
-        let handle = response.nl_payload.get_attr_handle();
+        let handle = response.nl_payload.as_ref().unwrap().get_attr_handle();
 
         for attr in handle.iter() {
             match &attr.nla_type {

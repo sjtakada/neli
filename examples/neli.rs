@@ -27,12 +27,12 @@ fn main() {
         Vec::new(),
         None,
         None,
-        Genlmsghdr::new(neli::consts::CtrlCmd::Unspec, 2, Vec::new()).unwrap(),
+        Some(Genlmsghdr::new(neli::consts::CtrlCmd::Unspec, 2, Vec::new()).unwrap()),
     );
     // Get parsing handler for the attributes in this message where the next call
     // to either get_nested_attributes() or get_payload() will expect a u16 type
     // to be provided
-    let mut handle = nlmsg.nl_payload.get_attr_handle();
+    let mut handle = nlmsg.nl_payload.as_ref().unwrap().get_attr_handle();
     // Get the nested attribute where the Nlattr field of nla_type is equal to 1 and return
     // a handler containing only this nested attribute internally
     let next = handle.get_nested_attributes::<u16>(1).unwrap();

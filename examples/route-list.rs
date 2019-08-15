@@ -11,12 +11,12 @@ use neli::socket::*;
 
 fn parse_route_table(rtm: Nlmsghdr<Rtm, Rtmsg<Rta>>) {
     // This sample is only interested in the main table.
-    if rtm.nl_payload.rtm_table == RtTable::Main {
+    if rtm.nl_payload.as_ref().unwrap().rtm_table == RtTable::Main {
         let mut src = None;
         let mut dst = None;
         let mut gateway = None;
 
-        for attr in &rtm.nl_payload.rtattrs {
+        for attr in &rtm.nl_payload.as_ref().unwrap().rtattrs {
             fn to_addr(b: &[u8]) -> Option<IpAddr> {
                 use std::convert::TryFrom;
                 if let Ok(tup) = <&[u8; 4]>::try_from(b) {
@@ -37,7 +37,7 @@ fn parse_route_table(rtm: Nlmsghdr<Rtm, Rtmsg<Rta>>) {
         }
 
         if let Some(dst) = dst {
-            print!("{}/{} ", dst, rtm.nl_payload.rtm_dst_len);
+            print!("{}/{} ", dst, rtm.nl_payload.as_ref().unwrap().rtm_dst_len);
         } else {
             print!("default ");
             if let Some(gateway) = gateway {
@@ -45,10 +45,10 @@ fn parse_route_table(rtm: Nlmsghdr<Rtm, Rtmsg<Rta>>) {
             }
         }
 
-        if rtm.nl_payload.rtm_scope != RtScope::Universe {
+        if rtm.nl_payload.as_ref().unwrap().rtm_scope != RtScope::Universe {
             print!(
                 " proto {:?}  scope {:?} ",
-                rtm.nl_payload.rtm_protocol, rtm.nl_payload.rtm_scope
+                rtm.nl_payload.as_ref().unwrap().rtm_protocol, rtm.nl_payload.as_ref().unwrap().rtm_scope
             )
         }
         if let Some(src) = src {
@@ -81,7 +81,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let flags = vec![NlmF::Request, NlmF::Dump];
         let seq = None;
         let pid = None;
-        let payload = rtmsg;
+        let payload = Some(rtmsg);
         Nlmsghdr::new(len, nl_type, flags, seq, pid, payload)
     };
     socket.send_nl(nlhdr).unwrap();
@@ -91,14 +91,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let multi_msg = nl.nl_flags.contains(&NlmF::Multi);
     parse_route_table(nl);
     if multi_msg {
-        while let Ok(nl) = socket.recv_nl::<u16, Rtmsg<Rta>>(None) {
-            match Nlmsg::from(nl.nl_type) {
-                Nlmsg::Done => return Ok(()),
-                Nlmsg::Error => return Err(Box::new(NlError::new("rtnetlink error."))),
+        while let Ok(nl) = socket.recv_nl::<Rtm, Rtmsg<Rta>>(None) {
+            match nl.nl_type {
+                Rtm::Done => return Ok(()),
+                Rtm::Error => return Err(Box::new(NlError::new("rtnetlink error."))),
                 _ => {
                     let rtm = Nlmsghdr {
                         nl_len: nl.nl_len,
-                        nl_type: Rtm::from(nl.nl_type),
+                        nl_type: nl.nl_type,
                         nl_flags: nl.nl_flags,
                         nl_seq: nl.nl_seq,
                         nl_pid: nl.nl_pid,
