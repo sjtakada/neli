@@ -101,3 +101,28 @@ impl_var!(
     Create => libc::NLM_F_CREATE as u16,
     Append => libc::NLM_F_APPEND as u16
 );
+
+/// TBD
+pub const RTNLGRP_NONE: libc::c_int = 0;
+/// TBD
+pub const RTNLGRP_LINK: libc::c_int = 1;
+/// TBD
+pub const RTNLGRP_IPV4_IFADDR: libc::c_int = 5;
+/// TBD
+pub const RTNLGRP_IPV4_ROUTE: libc::c_int = 7;
+/// TBD
+pub const RTNLGRP_IPV6_IFADDR: libc::c_int = 9;
+/// TBD
+pub const RTNLGRP_IPV6_ROUTE: libc::c_int = 11;
+/// TBD
+
+impl_var!(
+    /// Values for `groups` to bind socket
+    NlGroup, u32,
+    Unspec => RTNLGRP_NONE as u32,
+    Link => RTNLGRP_LINK as u32,
+    Ipv4Ifaddr => RTNLGRP_IPV4_IFADDR as u32,
+    Ipv4Route => RTNLGRP_IPV4_ROUTE as u32,
+    Ipv6Ifaddr => RTNLGRP_IPV6_IFADDR as u32,
+    Ipv6Route => RTNLGRP_IPV6_ROUTE as u32
+);

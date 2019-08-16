@@ -168,6 +168,45 @@ impl NlSocket {
         Ok(())
     }
 
+    /// Same as bind() funcition except a few things:
+    /// - Set membership group in nladdr instead of calling set_mcast_groups() explicitly.
+    /// - Call getsockname() to get pid associated with this socket.
+    pub fn bind2(&mut self, groups: Option<Vec<u32>>) -> Result<(), io::Error> {
+        let mut nladdr = unsafe { zeroed::<libc::sockaddr_nl>() };
+        nladdr.nl_family = libc::c_int::from(AddrFamily::Netlink) as u16;
+        if let Some(groups) = groups {
+            nladdr.nl_groups = groups
+                .into_iter()
+                .fold(0, |acc, next| acc | (1 << (next - 1)));
+        }
+
+        let mut socklen: libc::socklen_t = size_of::<libc::sockaddr_nl>() as u32;
+        match unsafe {
+            libc::bind(
+                self.fd,
+                &nladdr as *const _ as *const libc::sockaddr,
+                socklen,
+            )
+        } {
+            i if i >= 0 => (),
+            _ => return Err(io::Error::last_os_error()),
+        };
+
+        match unsafe {
+            libc::getsockname(
+                self.fd,
+                &mut nladdr as *const _ as *mut libc::sockaddr,
+                &mut socklen)
+        } {
+            i if i == 0 && socklen == size_of::<libc::sockaddr_nl>() as u32 => (),
+            _ => return Err(io::Error::last_os_error()),
+        };
+
+        self.pid = Some(nladdr.nl_pid);
+
+        Ok(())
+    }
+
     /// Set multicast groups for socket
     pub fn set_mcast_groups(&mut self, groups: Vec<u32>) -> Result<(), io::Error> {
         let grps = groups
@@ -236,6 +275,17 @@ impl NlSocket {
     ) -> Result<Self, io::Error> {
         let mut s = try!(NlSocket::new(proto, track_seq));
         try!(s.bind(pid, groups));
+        Ok(s)
+    }
+
+    /// Equivalent of `socket` and `bind2` calls.
+    pub fn connect2(
+        proto: NlFamily,
+        groups: Option<Vec<u32>>,
+        track_seq: bool,
+    ) -> Result<Self, io::Error> {
+        let mut s = try!(NlSocket::new(proto, track_seq));
+        try!(s.bind2(groups));
         Ok(s)
     }
 
@@ -308,6 +358,9 @@ impl NlSocket {
         P: Nl,
     {
         let mut mem = StreamWriteBuffer::new_growable(Some(msg.asize()));
+        if let Some(pid) = self.pid {
+            msg.nl_pid = pid;
+        }
         if let Some(ref mut seq) = self.seq {
             *seq += 1;
             msg.nl_seq = *seq;
@@ -336,6 +389,7 @@ impl NlSocket {
             Some(ref mut b) => Nlmsghdr::deserialize(b)?,
             None => unreachable!(),
         };
+
         if self.pid.is_none() {
             self.pid = Some(msg.nl_pid);
         } else if self.pid != Some(msg.nl_pid) {
@@ -348,6 +402,11 @@ impl NlSocket {
             self.buffer = None;
         }
         Ok(msg)
+    }
+
+    /// Reset StreamReadBuffer
+    pub fn reset_buffer(&mut self) {
+        self.buffer = None;
     }
 
     /// Consume an ACK and return an error if an ACK is not found
